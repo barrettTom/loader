@@ -1,10 +1,11 @@
 #!/usr/bin/python3
-from asciimatics.widgets import Frame, ListBox, Layout, Divider, Text, Button, TextBox, Widget, Label
+from asciimatics.widgets import Frame, MultiColumnListBox, Layout, Divider, Text, Button, TextBox, Widget, Label
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError, NextScene, StopApplication
 import sys
 import os
+import subprocess
 
 class View(Frame):
     def __init__(self, screen, number):
@@ -27,16 +28,33 @@ class View(Frame):
             layout2.add_widget(Button("Start", self._next), 1)
         else:
             layout2.add_widget(Button("Prev", self._prev), 0)
-            layout2.add_widget(Button("Next", self._next), 1)
+            next_button = Button("Next", self._next)
+            layout2.add_widget(next_button, 1)
+            next_button.disabled = True
             if number == "1":
                 layout.add_widget(Label("Choose an image."))
                 d = os.listdir("/srv/ftp/images")
-                d = [(x, i) for i, x in enumerate(d)]
-                self._list_view = ListBox(Widget.FILL_FRAME, d, name=self.number, on_change=None)
+                self.d = [([x], i) for i, x in enumerate(d)]
+                self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.d, on_select=self._2_next)
+                layout.add_widget(self._list_view)
+            elif number == "2":
+                t = subprocess.run(['parted', '-lms'], stdout=subprocess.PIPE)
+                t = str(t.stdout)
+                t = t.split("\\n")
+                self.f = []
+                for i, line in enumerate(t):
+                    if "dev" in line:
+                        if "sda" not in line:
+                            self.f.append(([line], i))
+                self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.f, on_select=self._2_next)
                 layout.add_widget(self._list_view)
     
         layout.add_widget(Divider())
         self.fix()
+
+    def _2_next(self):
+        self.image = self._list_view.value
+        self._next()
 
     def _next(self):
         raise NextScene(str(int(self.number)+1))
@@ -50,7 +68,7 @@ class View(Frame):
 
 def loader(screen, scene):
     scenes = []
-    for i in range(3):
+    for i in range(4):
         scenes.append(Scene([View(screen, str(i))], -1, name=str(i)))
             
     screen.play(scenes, stop_on_resize=True, start_scene=scene)
