@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-from asciimatics.widgets import Frame, ListBox, Layout, Divider, Text, Button, TextBox, Widget
+from asciimatics.widgets import Frame, ListBox, Layout, Divider, Text, Button, TextBox, Widget, Label
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError, NextScene, StopApplication
@@ -22,17 +22,18 @@ class View(Frame):
         self.add_layout(layout2)
 
         if number == "0":
+            layout.add_widget(Label("My IP is: 192.168.92.105"))
             layout2.add_widget(Button("Quit", self._quit), 0)
             layout2.add_widget(Button("Start", self._next), 1)
         else:
             layout2.add_widget(Button("Prev", self._prev), 0)
             layout2.add_widget(Button("Next", self._next), 1)
-            d = os.listdir("/srv/ftp/images")
-            l = []
-            for i, x in enumerate(d):
-                l.append((x,i))
-            self._list_view = ListBox(Widget.FILL_FRAME, l, name=self.number, on_change=None)
-            layout.add_widget(self._list_view)
+            if number == "1":
+                layout.add_widget(Label("Choose an image."))
+                d = os.listdir("/srv/ftp/images")
+                d = [(x, i) for i, x in enumerate(d)]
+                self._list_view = ListBox(Widget.FILL_FRAME, d, name=self.number, on_change=None)
+                layout.add_widget(self._list_view)
     
         layout.add_widget(Divider())
         self.fix()
