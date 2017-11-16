@@ -18,17 +18,23 @@ class View(Frame):
         self.number = number
         layout = Layout([100], fill_frame=True)
         self.add_layout(layout)
-
-        d = os.listdir("/srv/ftp/images")
-        self._list_view = ListBox(Widget.FILL_FRAME, [], name=self.number, on_change=None)
-        layout.add_widget(self._list_view)
-        layout.add_widget(Divider())
-
         layout2 = Layout([1, 1])
         self.add_layout(layout2)
-        layout2.add_widget(Button("Prev", self._prev), 0)
-        layout2.add_widget(Button("Next", self._next), 1)
+
+        if number == "0":
+            layout2.add_widget(Button("Quit", self._quit), 0)
+            layout2.add_widget(Button("Start", self._next), 1)
+        else:
+            layout2.add_widget(Button("Prev", self._prev), 0)
+            layout2.add_widget(Button("Next", self._next), 1)
+            d = os.listdir("/srv/ftp/images")
+            l = []
+            for i, x in enumerate(d):
+                l.append((x,i))
+            self._list_view = ListBox(Widget.FILL_FRAME, l, name=self.number, on_change=None)
+            layout.add_widget(self._list_view)
     
+        layout.add_widget(Divider())
         self.fix()
 
     def _next(self):
