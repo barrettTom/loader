@@ -7,15 +7,22 @@ import sys
 import os
 import subprocess
 
+class Model(object):
+    def __init__(self):
+        self.drive = ""
+        self.image = ""
+
 class View(Frame):
-    def __init__(self, screen, number):
+    def __init__(self, screen, data, number):
         super(View, self).__init__(screen,
                                    screen.height * 2 // 3,
                                    screen.width * 2 // 3,
-                                   on_load=None,
+                                   on_load=self.reload,
                                    hover_focus=True,
                                    title="Flash Loader")
 
+        self.model = data
+        self.screen = screen
         self.number = number
         layout = Layout([100], fill_frame=True)
         self.add_layout(layout)
@@ -29,31 +36,50 @@ class View(Frame):
         else:
             layout2.add_widget(Button("Prev", self._prev), 0)
             next_button = Button("Next", self._next)
-            layout2.add_widget(next_button, 1)
             next_button.disabled = True
             if number == "1":
+                layout2.add_widget(next_button, 1)
                 layout.add_widget(Label("Choose an image."))
                 d = os.listdir("/srv/ftp/images")
                 self.d = [([x], i) for i, x in enumerate(d)]
-                self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.d, on_select=self._2_next)
+                self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.d, on_select=self._1_next)
                 layout.add_widget(self._list_view)
             elif number == "2":
+                layout2.add_widget(next_button, 1)
                 t = subprocess.run(['parted', '-lms'], stdout=subprocess.PIPE)
                 t = str(t.stdout)
                 t = t.split("\\n")
                 self.f = []
-                for i, line in enumerate(t):
+                count = 0
+                for line in t:
                     if "dev" in line:
                         if "sda" not in line:
-                            self.f.append(([line], i))
+                            self.f.append(([line], count))
+                            count += 1
                 self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.f, on_select=self._2_next)
                 layout.add_widget(self._list_view)
+            elif number == "3":
+                next_button = Button("Ok", self._next)
+                layout2.add_widget(next_button, 1)
+                self.double_check_label = Label("Are you sure you want to write " + self.model.image + " to " + self.model.drive)
+                layout.add_widget(self.double_check_label)
     
         layout.add_widget(Divider())
         self.fix()
 
+    def reload(self):
+        self.__init__(self.screen, self.model, self.number) 
+
+    def _1_next(self):
+        if self._list_view.value is None:
+            self._list_view.value = 0
+        self.model.image = self.d[self._list_view.value][0][0]
+        self._next()
+
     def _2_next(self):
-        self.image = self._list_view.value
+        if self._list_view.value is None:
+            self._list_view.value = 0
+        self.model.drive = self.f[self._list_view.value][0][0]
         self._next()
 
     def _next(self):
@@ -68,12 +94,14 @@ class View(Frame):
 
 def loader(screen, scene):
     scenes = []
-    for i in range(4):
-        scenes.append(Scene([View(screen, str(i))], -1, name=str(i)))
+    for i in range(5):
+        scenes.append(Scene([View(screen, runtimeData, str(i))], -1, name=str(i)))
             
     screen.play(scenes, stop_on_resize=True, start_scene=scene)
 
 last_scene = None
+runtimeData = Model()
+
 while True:
     try:
         Screen.wrapper(loader, catch_interrupt=True, arguments=[last_scene])
