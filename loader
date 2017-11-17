@@ -1,4 +1,6 @@
 #!/usr/bin/python3
+from asciimatics.effects import Print
+from asciimatics.renderers import BarChart
 from asciimatics.widgets import Frame, MultiColumnListBox, Layout, Divider, Text, Button, TextBox, Widget, Label
 from asciimatics.scene import Scene
 from asciimatics.screen import Screen
@@ -6,6 +8,36 @@ from asciimatics.exceptions import ResizeScreenError, NextScene, StopApplication
 import sys
 import os
 import subprocess
+from random import randint
+
+progress = 0
+
+def get_progress():
+    global progress
+    if randint(0, 100) > 10:
+        progress += 1
+    return progress
+
+class ProgressBar(Print):
+    def __init__(self, screen):
+        super(ProgressBar, self).__init__(
+            screen,
+            BarChart(
+                7, 60, [get_progress],
+                char=">",
+                scale=100.0,
+                labels=True,
+                axes=BarChart.X_AXIS),
+            x=(screen.width - 60) // 2,
+            y=(screen.height - 7) // 2,
+            transparent=False, speed=2)
+
+    def _update(self, frame_no):
+        global progress
+        if progress >= 100:
+            raise StopApplication("100% complete")
+        else:
+            super(ProgressBar, self)._update(frame_no)
 
 class Model(object):
     def __init__(self):
@@ -59,7 +91,7 @@ class View(Frame):
                 self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.f, on_select=self._2_next)
                 layout.add_widget(self._list_view)
             elif number == "3":
-                next_button = Button("Ok", self._next)
+                next_button = Button("Ok", self._write)
                 layout2.add_widget(next_button, 1)
                 self.double_check_label = Label("Are you sure you want to write " + self.model.image + " to " + self.model.drive)
                 layout.add_widget(self.double_check_label)
@@ -82,6 +114,9 @@ class View(Frame):
         self.model.drive = self.f[self._list_view.value][0][0]
         self._next()
 
+    def _write(self):
+        pass
+
     def _next(self):
         raise NextScene(str(int(self.number)+1))
 
@@ -94,8 +129,12 @@ class View(Frame):
 
 def loader(screen, scene):
     scenes = []
-    for i in range(5):
+    for i in range(4):
         scenes.append(Scene([View(screen, runtimeData, str(i))], -1, name=str(i)))
+    
+    effects = [ProgressBar(screen, str(i+1))]
+
+    scenes.append(Scene(effects, -1, name=str(i+1)))
             
     screen.play(scenes, stop_on_resize=True, start_scene=scene)
 
