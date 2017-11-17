@@ -10,32 +10,32 @@ import os
 import subprocess
 from random import randint
 
-progress = 0
 
 def get_progress():
     global progress
-    if randint(0, 100) > 10:
+    if randint(0, 100) > 20:
         progress += 1
     return progress
 
 class ProgressBar(Print):
-    def __init__(self, screen):
+    def __init__(self, screen, number):
         super(ProgressBar, self).__init__(
             screen,
-            BarChart(
-                7, 60, [get_progress],
-                char=">",
-                scale=100.0,
-                labels=True,
-                axes=BarChart.X_AXIS),
+            BarChart(7, 60, [get_progress],
+                     char=">",
+                     scale=100.0,
+                     labels=True,
+                     axes=BarChart.X_AXIS),
             x=(screen.width - 60) // 2,
             y=(screen.height - 7) // 2,
             transparent=False, speed=2)
 
+        self.number = number
+
     def _update(self, frame_no):
         global progress
         if progress >= 100:
-            raise StopApplication("100% complete")
+            raise NextScene(str(int(self.number)+1))
         else:
             super(ProgressBar, self)._update(frame_no)
 
@@ -56,90 +56,108 @@ class View(Frame):
         self.model = data
         self.screen = screen
         self.number = number
-        layout = Layout([100], fill_frame=True)
-        self.add_layout(layout)
-        layout2 = Layout([1, 1])
-        self.add_layout(layout2)
+
+        self.layout = Layout([100], fill_frame=True)
+        self.add_layout(self.layout)
+        self.button_bar = Layout([1, 1])
+        self.add_layout(self.button_bar)
 
         if number == "0":
-            layout.add_widget(Label("My IP is: 192.168.92.105"))
-            layout2.add_widget(Button("Quit", self._quit), 0)
-            layout2.add_widget(Button("Start", self._next), 1)
-        else:
-            layout2.add_widget(Button("Prev", self._prev), 0)
-            next_button = Button("Next", self._next)
-            next_button.disabled = True
-            if number == "1":
-                layout2.add_widget(next_button, 1)
-                layout.add_widget(Label("Choose an image."))
-                d = os.listdir("/srv/ftp/images")
-                self.d = [([x], i) for i, x in enumerate(d)]
-                self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.d, on_select=self._1_next)
-                layout.add_widget(self._list_view)
-            elif number == "2":
-                layout2.add_widget(next_button, 1)
-                t = subprocess.run(['parted', '-lms'], stdout=subprocess.PIPE)
-                t = str(t.stdout)
-                t = t.split("\\n")
-                self.f = []
-                count = 0
-                for line in t:
-                    if "dev" in line:
-                        if "sda" not in line:
-                            self.f.append(([line], count))
-                            count += 1
-                self._list_view = MultiColumnListBox(Widget.FILL_FRAME, [0], self.f, on_select=self._2_next)
-                layout.add_widget(self._list_view)
-            elif number == "3":
-                next_button = Button("Ok", self._write)
-                layout2.add_widget(next_button, 1)
-                self.double_check_label = Label("Are you sure you want to write " + self.model.image + " to " + self.model.drive)
-                layout.add_widget(self.double_check_label)
-    
-        layout.add_widget(Divider())
+            self.init_0()
+        elif number == "1":
+            self.init_1()
+        elif number == "2":
+            self.init_2()
+        elif number == "3":
+            self.init_3()
+        elif number == "5":
+            self.init_5()
+        elif number == "6":
+            self.init_6()
+
+        self.layout.add_widget(Divider())
         self.fix()
+
+    def init_0(self):
+        self.layout.add_widget(Label("My IP is: 192.168.92.105"))
+        self.button_bar.add_widget(Button("Quit", self.quit), 0)
+        self.button_bar.add_widget(Button("Start", self.next), 1)
+
+    def init_1(self):
+        self.button_bar.add_widget(Button("Prev", self.prev), 0)
+        self.images = os.listdir("/srv/ftp/images")
+        self.images = [([x], i) for i, x in enumerate(self.images)]
+        self.images_list = MultiColumnListBox(Widget.FILL_FRAME, [0], self.images, on_select=self.select_image)
+        self.layout.add_widget(self.images_list)
+
+    def init_2(self):
+        self.button_bar.add_widget(Button("Prev", self.prev), 0)
+        process = subprocess.run(['parted', '-lms'], stdout=subprocess.PIPE)
+        process_out = str(process.stdout).split("\\n")
+        self.drives = []
+        count = 0
+        for line in process_out:
+            if "dev" in line:
+            #    if "sda" not in line:
+                self.drives.append(([line], count))
+                count += 1
+
+        self.drives_list = MultiColumnListBox(Widget.FILL_FRAME, [0], self.drives, on_select=self.select_drive)
+        self.layout.add_widget(self.drives_list)
+
+    def init_3(self):
+        self.button_bar.add_widget(Button("Prev", self.prev), 0)
+        self.button_bar.add_widget(Button("Ok", self.write), 1)
+        self.layout.add_widget(Label("Are you sure you want to write " + self.model.image + " to " + self.model.drive + "?"))
+
+    def init_5(self):
+        self.button_bar.add_widget(Button("Prev", self.prev), 0)
+        self.button_bar.add_widget(Button("Next", self.next), 1)
+
+    def init_6(self):
+        self.button_bar.add_widget(Button("Quit", self.quit), 0)
+
+    def select_image(self):
+        if self.images_list.value is None:
+            self.images_list.value = 0
+        self.model.image = self.images[self.images_list.value][0][0]
+        self.next()
+
+    def select_drive(self):
+        if self.drives_list.value is None:
+            self.drives_list.value = 0
+        self.model.drive = self.drives[self.drives_list.value][0][0]
+        self.next()
+    
+    def write(self):
+        self.next()
+
+    def next(self):
+        raise NextScene(str(int(self.number)+1))
+
+    def prev(self):
+        raise NextScene(str(int(self.number)-1))
 
     def reload(self):
         self.__init__(self.screen, self.model, self.number) 
 
-    def _1_next(self):
-        if self._list_view.value is None:
-            self._list_view.value = 0
-        self.model.image = self.d[self._list_view.value][0][0]
-        self._next()
-
-    def _2_next(self):
-        if self._list_view.value is None:
-            self._list_view.value = 0
-        self.model.drive = self.f[self._list_view.value][0][0]
-        self._next()
-
-    def _write(self):
-        pass
-
-    def _next(self):
-        raise NextScene(str(int(self.number)+1))
-
-    def _prev(self):
-        raise NextScene(str(int(self.number)-1))
-
     @staticmethod
-    def _quit():
+    def quit():
         raise StopApplication("User pressed quit")
 
 def loader(screen, scene):
     scenes = []
-    for i in range(4):
-        scenes.append(Scene([View(screen, runtimeData, str(i))], -1, name=str(i)))
+    for i in range(7):
+        if i == 4:
+            scenes.append(Scene([ProgressBar(screen, str(i))], -1, name=str(i)))
+        else:
+            scenes.append(Scene([View(screen, runtimeData, str(i))], -1, name=str(i)))
     
-    effects = [ProgressBar(screen, str(i+1))]
-
-    scenes.append(Scene(effects, -1, name=str(i+1)))
-            
     screen.play(scenes, stop_on_resize=True, start_scene=scene)
 
 last_scene = None
 runtimeData = Model()
+progress = 0
 
 while True:
     try:
