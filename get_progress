@@ -1,5 +1,5 @@
 #!/bin/bash
-PID="$(pgrep -f 'gzip')"
+PID="$(pgrep -x 'gzip')"
 cd /proc/$PID
 size=$(stat -L fd/3 -c "%s")
 pos=$(awk '/pos:/ { print $2 }' fdinfo/3)
