@@ -17,7 +17,8 @@ def get_progress():
         progress = int(float(process.stdout)*100)
         return progress
     except:
-        return 100
+        progress = 100
+        return progress
 
 
 class ProgressBar(Print):
@@ -37,7 +38,7 @@ class ProgressBar(Print):
 
     def _update(self, frame_no):
         global progress
-        if progress >= 99:
+        if progress >= 100:
             raise NextScene(str(int(self.number)+1))
         else:
             super(ProgressBar, self)._update(frame_no)
