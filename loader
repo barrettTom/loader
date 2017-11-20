@@ -20,7 +20,6 @@ def get_progress():
         progress = 100
         return progress
 
-
 class ProgressBar(Print):
     def __init__(self, screen, number):
         super(ProgressBar, self).__init__(
@@ -49,15 +48,16 @@ class Model(object):
         self.image = ""
 
 class View(Frame):
-    def __init__(self, screen, data, number):
+    def __init__(self, screen, model, number):
         super(View, self).__init__(screen,
                                    screen.height * 2 // 3,
                                    screen.width * 2 // 3,
                                    on_load=self.reload,
+                                   data = form_data,
                                    hover_focus=True,
                                    title="Flash Loader")
 
-        self.model = data
+        self.model = model
         self.screen = screen
         self.number = number
 
@@ -76,6 +76,8 @@ class View(Frame):
             self.init_3()
         elif number == "5":
             self.init_5()
+        elif number == "6":
+            self.init_6()
 
         self.layout.add_widget(Divider())
         self.fix()
@@ -114,8 +116,18 @@ class View(Frame):
 
     def init_5(self):
         self.layout.add_widget(Label("Process was successful."))
-        self.button_bar.add_widget(Button("Restart", self.restart), 0)
-        self.button_bar.add_widget(Button("Quit", self.quit), 1)
+        self.layout.add_widget(Label("Would you like to generate the XML for the image?"))
+        self.button_bar.add_widget(Button("No", self.restart), 0)
+        self.button_bar.add_widget(Button("Yes", self.next), 1)
+
+    def init_6(self):
+        self.layout.add_widget(Label("Enter required fields:."))
+        self.layout.add_widget(Text("Customer:", "customer"))
+        self.layout.add_widget(Text("BA Number:", "ba_number"))
+        self.layout.add_widget(Text("Project Number:", "project_number"))
+        self.layout.add_widget(Text("Machine Type:", "machine_type"))
+        self.button_bar.add_widget(Button("Prev", self.prev), 0)
+        self.button_bar.add_widget(Button("Next", self.quit), 1)
 
     def select_image(self):
         if self.images_list.value is None:
@@ -154,7 +166,7 @@ class View(Frame):
 
 def loader(screen, scene):
     scenes = []
-    for i in range(7):
+    for i in range(8):
         if i == 4:
             scenes.append(Scene([ProgressBar(screen, str(i))], -1, name=str(i)))
         else:
@@ -165,6 +177,12 @@ def loader(screen, scene):
 last_scene = None
 runtimeData = Model()
 progress = 0
+form_data = {
+    'customer'          : '',
+    'ba_number'         : '',
+    'project_number'    : '',
+    'machine_type'      : '',
+}
 
 while True:
     try:
