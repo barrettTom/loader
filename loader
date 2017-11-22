@@ -8,7 +8,6 @@ from asciimatics.exceptions import ResizeScreenError, NextScene, StopApplication
 import sys
 import os
 import subprocess
-from random import randint
 
 def get_progress():
     global progress
@@ -35,12 +34,12 @@ class ProgressBar(Print):
 
         self.number = number
 
-    def _update(self, frame_no):
+    def update(self, frame_no):
         global progress
         if progress >= 100:
             raise NextScene(str(int(self.number)+1))
         else:
-            super(ProgressBar, self)._update(frame_no)
+            super(ProgressBar, self).update(frame_no)
 
 class Model(object):
     def __init__(self):
@@ -78,6 +77,8 @@ class View(Frame):
             self.init_5()
         elif number == "6":
             self.init_6()
+        elif number == "7":
+            self.init_7()
 
         self.layout.add_widget(Divider())
         self.fix()
@@ -126,6 +127,11 @@ class View(Frame):
         self.layout.add_widget(Text("BA Number:", "ba_number"))
         self.layout.add_widget(Text("Project Number:", "project_number"))
         self.layout.add_widget(Text("Machine Type:", "machine_type"))
+        self.button_bar.add_widget(Button("Prev", self.prev), 0)
+        self.button_bar.add_widget(Button("Next", self.next), 1)
+
+    def init_7(self):
+        #self.layout.add_widget(Label(self.data["customer"]))
         self.button_bar.add_widget(Button("Prev", self.prev), 0)
         self.button_bar.add_widget(Button("Next", self.quit), 1)
 
